@@ -1,0 +1,11 @@
+
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#0d1b3a;color:#fff}
+header{padding:1rem;font-weight:bold}
+.logo{color:#fff;text-decoration:none}
+.ribbon{display:flex;gap:1rem;overflow-x:auto;padding:1rem;background:#15285b}
+.ribbon::-webkit-scrollbar{display:none}
+.card-link{flex:0 0 7rem;text-align:center;color:#fff;text-decoration:none}
+.card-link img{width:64px;height:64px;border-radius:1rem;display:block;margin:auto}
+.card-link span{font-size:.85rem;display:block;padding-top:.4rem}
+main{padding:2rem}
+footer{text-align:center;padding:2rem;font-size:.8rem;opacity:.7}
