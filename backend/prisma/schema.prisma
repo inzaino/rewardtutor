@@ -1,0 +1,402 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  PARENT
+  TEACHER
+  ADMIN
+}
+
+enum GradeLevel {
+  K
+  GRADE_1
+  GRADE_2
+  GRADE_3
+  GRADE_4
+  GRADE_5
+  GRADE_6
+  GRADE_7
+  GRADE_8
+  GRADE_9
+  GRADE_10
+  GRADE_11
+  GRADE_12
+}
+
+enum Subject {
+  MATH
+  ENGLISH
+  SCIENCE
+  SOCIAL_STUDIES
+  COMPUTER_SCIENCE
+  FOREIGN_LANGUAGE
+  ART
+  MUSIC
+  PHYSICAL_EDUCATION
+  HEALTH
+}
+
+enum ActivityType {
+  LESSON
+  PRACTICE
+  QUIZ
+  ESSAY
+  CODE_SUBMISSION
+  INTERACTIVE_MODULE
+  PEER_REVIEW
+}
+
+enum SmartCoinEventType {
+  EARNED
+  SPENT
+  BONUS
+  PENALTY
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          UserRole
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Student-specific fields
+  gradeLevel    GradeLevel?
+  dateOfBirth   DateTime?
+  
+  // Parent-child relationships
+  children      User[]    @relation("ParentChild")
+  parents       User[]    @relation("ParentChild")
+  
+  // Teacher-student relationships
+  students      User[]    @relation("TeacherStudent")
+  teachers      User[]    @relation("TeacherStudent")
+
+  // Learning data
+  studentProfile     StudentProfile?
+  smartCoinTransactions SmartCoinTransaction[]
+  learningPaths     LearningPath[]
+  completedActivities CompletedActivity[]
+  essays            Essay[]
+  codeSubmissions   CodeSubmission[]
+  peerReviews       PeerReview[]
+  givenReviews      PeerReview[] @relation("ReviewerPeerReviews")
+  
+  // Parent settings
+  smartCoinSettings SmartCoinSettings[]
+  rewardApprovals   RewardApproval[]
+
+  @@map("users")
+}
+
+model StudentProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  totalSmartCoins   Int      @default(0)
+  streakDays        Int      @default(0)
+  lastActiveDate    DateTime?
+  
+  // Learning preferences
+  preferredSubjects Subject[]
+  learningStyle     String?  // visual, auditory, kinesthetic, reading
+  
+  // Progress tracking
+  masteredConcepts  String[] // Array of knowledge graph node IDs
+  strugglingConcepts String[] // Array of knowledge graph node IDs
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("student_profiles")
+}
+
+model SmartCoinSettings {
+  id                      String @id @default(cuid())
+  parentId                String
+  parent                  User   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  
+  // Configurable SmartCoin values
+  lessonCompletion        Int    @default(100)
+  practiceSetCompletion   Int    @default(50)
+  quizCompletion          Int    @default(75)
+  essaySubmission         Int    @default(150)
+  codeSubmission          Int    @default(150)
+  dailyStreak             Int    @default(25)
+  weeklyStreak            Int    @default(100)
+  conceptMastery          Int    @default(200)
+  highAccuracyBonus       Int    @default(50)
+  peerReviewContribution  Int    @default(75)
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([parentId])
+  @@map("smart_coin_settings")
+}
+
+model SmartCoinTransaction {
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  amount        Int
+  eventType     SmartCoinEventType
+  description   String
+  relatedActivityId String?
+  
+  createdAt     DateTime            @default(now())
+
+  @@map("smart_coin_transactions")
+}
+
+model KnowledgeGraphNode {
+  id                    String   @id @default(cuid())
+  title                 String
+  description           String?
+  subject               Subject
+  gradeLevel            GradeLevel
+  difficulty            Int      // 1-10 scale
+  prerequisites         String[] // Array of node IDs
+  learningObjectives    String[]
+  commonMisconceptions  String[]
+  
+  // Khan Academy integration
+  khanAcademyId         String?
+  khanAcademyUrl        String?
+  
+  activities            Activity[]
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("knowledge_graph_nodes")
+}
+
+model Activity {
+  id                    String       @id @default(cuid())
+  title                 String
+  description           String?
+  type                  ActivityType
+  subject               Subject
+  gradeLevel            GradeLevel
+  difficulty            Int          // 1-10 scale
+  estimatedMinutes      Int
+  
+  knowledgeNodeId       String
+  knowledgeNode         KnowledgeGraphNode @relation(fields: [knowledgeNodeId], references: [id], onDelete: Cascade)
+  
+  // Content
+  content               Json?        // Flexible content structure
+  instructions          String?
+  rubric                Json?        // For essays and complex submissions
+  
+  // Khan Academy integration
+  khanAcademyId         String?
+  khanAcademyUrl        String?
+  khanAcademyType       String?      // video, exercise, article
+  
+  completedActivities   CompletedActivity[]
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@map("activities")
+}
+
+model CompletedActivity {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityId    String
+  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  
+  score         Float?    // 0-100 percentage
+  accuracy      Float?    // 0-100 percentage
+  timeSpent     Int       // minutes
+  attempts      Int       @default(1)
+  isCompleted   Boolean   @default(false)
+  isMastered    Boolean   @default(false)
+  
+  smartCoinsEarned Int    @default(0)
+  
+  completedAt   DateTime  @default(now())
+
+  @@unique([userId, activityId])
+  @@map("completed_activities")
+}
+
+model LearningPath {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title             String
+  description       String?
+  subject           Subject
+  gradeLevel        GradeLevel
+  
+  // Ordered list of activity IDs
+  activitySequence  String[]
+  currentPosition   Int      @default(0)
+  isCompleted       Boolean  @default(false)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("learning_paths")
+}
+
+model Essay {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title         String
+  prompt        String
+  content       String
+  subject       Subject
+  gradeLevel    GradeLevel
+  
+  // AI feedback
+  score         Float?   // 0-100
+  rubricScores  Json?    // Detailed rubric breakdown
+  feedback      String?
+  suggestions   Json?    // Structured improvement suggestions
+  
+  revisionCount Int      @default(0)
+  parentEssayId String?  // For tracking revisions
+  parentEssay   Essay?   @relation("EssayRevisions", fields: [parentEssayId], references: [id])
+  revisions     Essay[]  @relation("EssayRevisions")
+  
+  peerReviews   PeerReview[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("essays")
+}
+
+model CodeSubmission {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title         String
+  prompt        String
+  code          String
+  language      String   @default("java")
+  subject       Subject  @default(COMPUTER_SCIENCE)
+  gradeLevel    GradeLevel
+  
+  // AI feedback
+  score         Float?   // 0-100
+  feedback      String?
+  syntaxErrors  Json?    // Array of syntax issues
+  suggestions   Json?    // Improvement suggestions
+  testResults   Json?    // Unit test results
+  
+  revisionCount Int      @default(0)
+  parentSubmissionId String?
+  parentSubmission   CodeSubmission? @relation("CodeRevisions", fields: [parentSubmissionId], references: [id])
+  revisions     CodeSubmission[]    @relation("CodeRevisions")
+  
+  peerReviews   PeerReview[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("code_submissions")
+}
+
+model PeerReview {
+  id            String   @id @default(cuid())
+  reviewerId    String
+  reviewer      User     @relation("ReviewerPeerReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  revieweeId    String
+  reviewee      User     @relation(fields: [revieweeId], references: [id], onDelete: Cascade)
+  
+  // What's being reviewed
+  essayId       String?
+  essay         Essay?   @relation(fields: [essayId], references: [id], onDelete: Cascade)
+  codeSubmissionId String?
+  codeSubmission   CodeSubmission? @relation(fields: [codeSubmissionId], references: [id], onDelete: Cascade)
+  
+  // Review content
+  rating        Int      // 1-5 stars
+  feedback      String
+  suggestions   String?
+  isHelpful     Boolean  @default(true)
+  
+  smartCoinsEarned Int   @default(0)
+  
+  createdAt     DateTime @default(now())
+
+  @@map("peer_reviews")
+}
+
+model Reward {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  category      String   // gift_card, event_ticket, physical, experience
+  provider      String   // amazon, starbucks, target, etc.
+  
+  smartCoinCost Int
+  dollarValue   Float
+  
+  imageUrl      String?
+  termsUrl      String?
+  
+  isActive      Boolean  @default(true)
+  ageMinimum    Int?
+  ageMaximum    Int?
+  
+  approvals     RewardApproval[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("rewards")
+}
+
+model RewardApproval {
+  id            String   @id @default(cuid())
+  studentId     String
+  student       User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parentId      String
+  parent        User     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  rewardId      String
+  reward        Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  
+  smartCoinsSpent Int
+  dollarAmount    Float
+  
+  status        String   @default("pending") // pending, approved, delivered, cancelled
+  
+  // Fulfillment data
+  giftCardCode  String?
+  deliveryEmail String?
+  deliveredAt   DateTime?
+  
+  requestedAt   DateTime @default(now())
+  approvedAt    DateTime?
+
+  @@map("reward_approvals")
+}
