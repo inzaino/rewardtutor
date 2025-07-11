@@ -1,5 +1,5 @@
 import React from 'react';
-import { CurrencyDollarIcon, GiftIcon, TrophyIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CurrencyDollarIcon, GiftIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 const SmartCoins: React.FC = () => {
   const recentTransactions = [

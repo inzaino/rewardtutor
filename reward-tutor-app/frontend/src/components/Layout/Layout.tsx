@@ -1,8 +1,6 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { useAppSelector } from '../../hooks/redux';
 import { 
-  HomeIcon, 
   BookOpenIcon, 
   CurrencyDollarIcon, 
   ChartBarIcon,
@@ -12,8 +10,10 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Layout: React.FC = () => {
-  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-  const { balance } = useAppSelector((state) => state.smartCoins);
+  // Temporary hardcoded values until Redux is fully connected
+  const isAuthenticated = true;
+  const user = { firstName: 'Alex' };
+  const balance = 1275;
 
   const navigationItems = [
     { name: 'About', href: '/about', icon: InformationCircleIcon },

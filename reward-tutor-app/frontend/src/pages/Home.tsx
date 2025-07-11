@@ -4,7 +4,6 @@ import {
   BookOpenIcon, 
   CurrencyDollarIcon, 
   ChartBarIcon,
-  StarIcon,
   PlayIcon,
   AcademicCapIcon 
 } from '@heroicons/react/24/outline';
